@@ -5,6 +5,7 @@ const MIN_P = 3;
 const MAX_P = 10;
 const STATUS_SLEEP = 'sleep';
 const STATUS_AWAKE = 'awake';
+const STATUS_CANT_WORK = 'cant work';
 const COLORS = [
   '#cd84f1',
   '#ffcccc',

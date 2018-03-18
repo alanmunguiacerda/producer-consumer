@@ -9,13 +9,21 @@ class BaseWorker {
     this.idx = 0;
     this.sleepT = 0;
     this.sleepInterval = null;
-    this.awake();
+    this._toWork = getRandomInt(MIN_P, MAX_P);
   }
 
-  sleep(ticks) {
+  sleep(triedToWork = false) {
     if (this.sleepInterval) return;
-    this.sleepT = ticks;
-    this.status = STATUS_SLEEP;
+    this.sleepT = getRandomInt(MIN_P, MAX_P);
+    
+    if (triedToWork) {
+      this.status = STATUS_CANT_WORK;
+      setTimeout(() => {
+        this.status = STATUS_SLEEP;
+      }, TICK_INTERVAL);
+    } else {
+      this.status = STATUS_SLEEP;
+    }
     this.sleepInterval = setInterval(() => {
       this.sleepT -= 1;
       if (!this.sleepT) {
@@ -28,6 +36,9 @@ class BaseWorker {
 
   awake() {
     this.status = STATUS_AWAKE;
+    const eventName = `${this.constructor.name}Awoke`;
+    console.log(eventName);
+    bus.$emit(eventName);
   }
 
   isAwake() {
@@ -35,81 +46,67 @@ class BaseWorker {
   }
 
   isAsleep() {
-    return this.status === STATUS_SLEEP;
+    return this.status === STATUS_SLEEP || this.cantWork();
+  }
+  
+  cantWork() {
+    return this.status === STATUS_CANT_WORK;
   }
   
   increaseIndex() {
     this.idx = (this.idx + 1) % CONTAINER_SIZE; 
   }
+  
+  get toWork() {
+    return this._toWork;
+  }
+  
+  set toWork(toWork) {
+    this._toWork = toWork;
+  }
 }
 
 class Producer extends BaseWorker {
-  produce(container) {
+  work(container) {
     if (container[this.idx]) {
-      this.sleep(getRandomInt(MIN_P, MAX_P));
+      this.sleep();
       return;
     }
     container[this.idx] = getRandomColor();
-    this.toProduce -= 1;
+    this.toWork -= 1;
     this.increaseIndex();
   }
-  
+
   getStatusStr() {
-    let text = this.status;
-    
-    if (this.isAsleep()) {
-      text += ` - ${this.sleepT} ticks remaining`;
-      return text;
+    if (this.isAsleep() || this.cantWork()) {
+      return `sleep (${this.sleepT} ticks remaining) ${this.cantWork() ? 'tried to work' : ''}`;
     }
-    
+
     if (this.isAwake()) {
-      text += ` - producing ${this.toProduce}`;
-      return text;
+      return `awake (producing ${this.toWork})`;
     }
-    return 'KAKA';
-  }
-  
-  get toProduce() {
-    return this._toProduce;
-  }
-  
-  set toProduce(toProduce) {
-    this._toProduce = toProduce;
   }
 }
 
 class Consumer extends BaseWorker {
-  consume(container) {
+  work(container) {
     if (!container[this.idx]) {
-      this.sleep(getRandomInt(MIN_P, MAX_P));
+      this.sleep();
       return;
     }
     container[this.idx] = '';
-    this.toConsume -= 1;
+    this.toWork -= 1;
     this.increaseIndex();
   }
   
   getStatusStr() {
-    let text = this.status;
-    
-    if (this.isAsleep()) {
-      text += ` - ${this.sleepT} ticks remaining`;
-      return text;
+    if (this.isAsleep() || this.cantWork()) {
+      return `sleep (${this.sleepT} ticks remaining) ${this.cantWork() ? 'tried to work' : ''}`;
     }
     
     if (this.isAwake()) {
-      text += ` - consuming ${this.toConsume}`;
-      return text;
+      return `awake (consuming ${this.toWork})`;
     }
-    return 'KAKA';
-  }
-  
-  get toConsume() {
-    return this._toConsume;
-  }
-  
-  set toConsume(toConsume) {
-    this._toConsume = toConsume;
   }
 }
 
@@ -125,19 +122,42 @@ const app = new Vue({
     startSimulation: function() {
       if (this.timerInterval) return;
 
+      this.producer.sleep();
+      this.consumer.sleep();
+
+      let worker = null;
+      
+      bus.$on('ProducerAwoke', () => {
+        console.log('try to set Producer as worker');
+        if (this.consumer.isAwake()) {
+          this.producer.sleep(true);
+          return;
+        }
+        
+        worker = this.producer;
+      });
+      bus.$on('ConsumerAwoke', () => {
+        console.log('try to set Consumer as worker');
+        if (this.producer.isAwake()) {
+          this.consumer.sleep(true);
+          return;
+        }
+        
+        worker = this.consumer;
+      });
+
       this.timerInterval = setInterval(() => {
-        if (this.producer.isAwake() && this.producer.toProduce) {
-          this.producer.produce(this.container);
-        } else if (!this.producer.toProduce) {
-          this.producer.sleep(getRandomInt(MIN_P, MAX_P));
-          this.producer.toProduce = getRandomInt(MIN_P, MAX_P);
+        if (!worker) {
+          console.log('No worker');
+          return;
         }
 
-        if (this.consumer.isAwake() && this.consumer.toConsume) {
-          this.consumer.consume(this.container);
-        } else if (!this.consumer.toConsume) {
-          this.consumer.sleep(getRandomInt(MIN_P, MAX_P));
-          this.consumer.toConsume = getRandomInt(MIN_P, MAX_P);
+        if (worker.isAwake() && worker.toWork) {
+          worker.work(this.container);
+        } else if (!worker.toWork) {
+          worker.sleep();
+          worker.toWork = getRandomInt(MIN_P, MAX_P);
+          worker = null;
         }
       }, TICK_INTERVAL);
     },
@@ -145,6 +165,8 @@ const app = new Vue({
       if (this.timerInterval) {
         clearInterval(this.timerInterval);
         this.timerInterval = null;
+        bus.$off('ProducerAwoke');
+        bus.$off('ConsumerAwoke');
       }
     },
   },
