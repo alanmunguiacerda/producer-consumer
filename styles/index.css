@@ -1,0 +1,42 @@
+td {
+  padding: 0.1rem 1.5rem;
+}
+th {
+  padding: 0.1rem 1.5rem;
+}
+.divisor {
+  border-top: 0.1rem solid #e1e1e1;
+  margin: 0 0 2rem 0;
+}
+h5 {
+  color: #42b983;
+}
+.flex-container {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+}
+.wrap { 
+  flex-wrap: wrap;
+}  
+.wrap li {
+  background: gold;
+}
+.flex-item {
+  background: tomato;
+  width: 70px;
+  height: 70px;
+  margin: 10px;
+  
+  line-height: 70px;
+  color: white;
+  font-weight: bold;
+  font-size: 2em;
+  text-align: center;
+}
+.flex-item.empty {
+  color: inherit;
+  background: transparent;
+  border: 1px solid #606c76;
+}
