@@ -1,4 +1,4 @@
-const TICK_INTERVAL = 2000;
+const TICK_INTERVAL = 1500;
 
 const CONTAINER_SIZE = 35;
 const MIN_P = 3;

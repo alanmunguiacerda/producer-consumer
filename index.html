@@ -10,9 +10,9 @@
     <link rel="stylesheet" href="/styles/index.css">
   </head>
   <body class="container">
-    <h1>Producer - consumer</h1>
-    <div class="divisor"></div>
     <div id="app">
+      <h1>Producer - consumer ({{ timerInterval ? 'running' : 'stopped' }})</h1>
+      <div class="divisor"></div>
       <div class="row">
         <div class="column">
           <h3>Producer: {{ producer.getStatusStr() }}</h3>
