@@ -68,6 +68,13 @@ class BaseWorker {
     this._toWork = toWork;
   }
   
+  destroy() {
+    if (this.sleepInterval) {
+      clearInterval(this.sleepInterval);
+      this.sleepInterval = null;
+    }
+  }
+  
   getStatusStr() {
     if (this.isAsleep() || this.isBufferBusy() || this.cantUseBuffer()) {
       let text = `sleep (${this.sleepT} ticks remaining) `;
@@ -135,7 +142,6 @@ const app = new Vue({
       let worker = null;
       
       bus.$on('ProducerAwoke', () => {
-        console.log('try to set Producer as worker');
         if (this.consumer.isAwake()) {
           this.producer.sleep(STATUS_BUFFER_BUSY);
           return;
@@ -149,7 +155,6 @@ const app = new Vue({
         worker = this.producer;
       });
       bus.$on('ConsumerAwoke', () => {
-        console.log('try to set Consumer as worker');
         if (this.producer.isAwake()) {
           this.consumer.sleep(STATUS_BUFFER_BUSY);
           return;
@@ -184,6 +189,8 @@ const app = new Vue({
         this.timerInterval = null;
         bus.$off('ProducerAwoke');
         bus.$off('ConsumerAwoke');
+        this.producer.destroy();
+        this.consumer.destroy();
       }
     },
   },
