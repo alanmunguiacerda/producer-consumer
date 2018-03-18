@@ -169,10 +169,7 @@ const app = new Vue({
       });
 
       this.timerInterval = setInterval(() => {
-        if (!worker) {
-          console.log('No worker');
-          return;
-        }
+        if (!worker) return;
 
         if (worker.isAwake() && worker.toWork) {
           worker.work();
